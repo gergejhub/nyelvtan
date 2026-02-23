@@ -8,7 +8,7 @@
 
   const STORAGE = {
     session: 'nyelvtan_mt_session_v1',
-    stats: 'nyelvtan_mt_stats_v1'
+    stats: 'nyelvtan_mt_stats_v2'
   };
 
   const TOPICS = [
@@ -31,6 +31,43 @@
     .replaceAll('<','&lt;')
     .replaceAll('>','&gt;');
 
+const stripDiacritics = (s) => normalize(s)
+  .normalize('NFD')
+  .replace(/\p{Diacritic}/gu,'');
+
+const collapseDoubles = (s) => normalize(s).replace(/([a-záéíóöőúüű])\1+/g,'$1');
+
+function evaluateAnswer(q, user){
+  // Returns {score:0|0.5|1, verdict:'ok'|'partial'|'wrong', reason?:string}
+  if(q.type==='mcq'){
+    const ok = normalize(user) === normalize(q.answer);
+    return {score: ok ? 1 : 0, verdict: ok ? 'ok' : 'wrong'};
+  }
+  if(q.type==='pick'){
+    const ok = user === q.answer;
+    return {score: ok ? 1 : 0, verdict: ok ? 'ok' : 'wrong'};
+  }
+  // input
+  const accepted = (q.accepted ?? [q.answer]).map(normalize);
+  const u = normalize(user);
+  if(accepted.includes(u)) return {score:1, verdict:'ok'};
+
+  // Partial 1: only diacritics differ
+  const u2 = stripDiacritics(user);
+  if(accepted.map(stripDiacritics).includes(u2)){
+    return {score:0.5, verdict:'partial', reason:'ékezet'};
+  }
+
+  // Partial 2: doubles / kettőzés mismatch (common in assimilation)
+  const u3 = collapseDoubles(user);
+  if(accepted.map(collapseDoubles).includes(u3)){
+    return {score:0.5, verdict:'partial', reason:'kettőzés'};
+  }
+
+  return {score:0, verdict:'wrong'};
+}
+
+
   function shuffle(arr){
     const a = arr.slice();
     for(let i=a.length-1;i>0;i--){
@@ -40,6 +77,33 @@
     }
     return a;
   }
+function getStats(){
+  return loadJSON(STORAGE.stats, {
+    bestPct:0, bestScore:0, last:null,
+    attemptsById:{}, wrongById:{}, partialById:{},
+    wrongByTopic:{}, wrongByReason:{},
+    updatedAt: null
+  });
+}
+
+function saveStats(stats){
+  stats.updatedAt = now();
+  saveStats(stats);
+}
+
+function weightedSampleNoReplace(items, weights, k){
+  // Efraimidis-Spirakis style: sample by keys = u^(1/w)
+  const keyed = items.map((it, idx)=>{
+    const w = Math.max(0.0001, weights[idx] ?? 1);
+    const u = crypto.getRandomValues(new Uint32Array(1))[0] / 2**32;
+    const key = Math.pow(u, 1/w);
+    return {it, key};
+  });
+  keyed.sort((a,b)=>b.key-a.key);
+  return keyed.slice(0, k).map(x=>x.it);
+}
+
+
 
   function now(){ return Date.now(); }
   function msToClock(ms){
@@ -108,7 +172,33 @@
       topicList.appendChild(b);
     });
   }
-  renderTopics();
+  
+function populateExamTopicSelect(){
+  const sel = $('#examTopicSelect');
+  if(!sel) return;
+  sel.innerHTML = '';
+  TOPICS.filter(t=>t.key!=='vegyes').forEach(t=>{
+    const opt = document.createElement('option');
+    opt.value = t.key;
+    opt.textContent = t.label;
+    sel.appendChild(opt);
+  });
+  // default
+  sel.value = TOPICS.find(t=>t.key!=='vegyes')?.key || '';
+}
+
+// exam scope UI
+const examScopeEl = $('#examScope');
+if(examScopeEl){
+  examScopeEl.addEventListener('change', ()=>{
+    const row = $('#examTopicRow');
+    if(row) row.hidden = (getMode()!=='exam') || (examScopeEl.value!=='topic');
+    syncModeUI();
+  });
+}
+
+renderTopics();
+  populateExamTopicSelect();
 
   // --- Mode handling
   const modeRadios = $$('input[name="mode"]');
@@ -117,6 +207,14 @@
   function syncModeUI(){
     const m = getMode();
     topicCard.style.display = (m==='topic') ? 'block' : 'none';
+
+    const examCard = $('#examCard');
+    if(examCard){
+      examCard.hidden = (m!=='exam');
+      const scope = $('#examScope')?.value ?? 'mixed';
+      const row = $('#examTopicRow');
+      if(row) row.hidden = !(m==='exam' && scope==='topic');
+    }
   }
   modeRadios.forEach(r=>r.addEventListener('change', syncModeUI));
   syncModeUI();
@@ -125,15 +223,16 @@
   let session = null;
   let timer = null;
 
-  function buildPool({mode, topic, difficulty}){
+  function buildPool({mode, topic, difficulty, adaptive}){
     let pool = window.QUESTIONS.slice();
 
     // Mode filter
     if(mode==='topic'){
       pool = pool.filter(q => q.topic === topic);
     } else if(mode==='exam'){
-      // exam is mixed but exclude "vegyes" classification questions by default (focus on spelling)
+      // exam: alapból vegyes (helyesírás fókusz), de ha megadtál témát, akkor csak abból kérdez
       pool = pool.filter(q => q.topic !== 'vegyes');
+      if(topic){ pool = pool.filter(q => q.topic === topic); }
     }
 
     // Difficulty filter: include chosen level + all easier
@@ -141,8 +240,21 @@
     const idx = order.indexOf(difficulty);
     pool = pool.filter(q => order.indexOf(q.difficulty) <= idx);
 
+      if(!adaptive){
     return shuffle(pool);
   }
+
+  const stats = getStats();
+  const weights = pool.map(q=>{
+    const wId = (stats.wrongById?.[q.id] ?? 0);
+    const wTopic = (stats.wrongByTopic?.[q.topic] ?? 0);
+    // base weight: wrong items and wrong topic get more probability
+    return 1 + Math.min(6, wId*0.8 + wTopic*0.08);
+  });
+
+  // Don't return more than pool size
+  return weightedSampleNoReplace(pool, weights, pool.length);
+}
 
   function startNewSession(){
     const mode = getMode();
@@ -152,12 +264,22 @@
     const hintEnabled = $('#showHint').checked;
 
     if(mode==='topic' && !selectedTopic){
-      toast('Válassz témakört!');
-      return;
-    }
+  toast('Válassz témakört!');
+  return;
+}
 
-    const topic = (mode==='topic') ? selectedTopic : null;
-    let pool = buildPool({mode, topic, difficulty});
+// Mini témazáró: lehet kevert vagy témakörös
+const examScope = (mode==='exam') ? ($('#examScope')?.value ?? 'mixed') : null;
+const examTopic = (mode==='exam' && examScope==='topic') ? ($('#examTopicSelect')?.value ?? null) : null;
+
+if(mode==='exam' && examScope==='topic' && !examTopic){
+  toast('Válassz témakört a mini témazáróhoz!');
+  return;
+}
+
+const topic = (mode==='topic') ? selectedTopic : (mode==='exam' && examScope==='topic') ? examTopic : null;
+const adaptive = !!$('#adaptiveMode')?.checked;
+let pool = buildPool({mode, topic, difficulty, adaptive});
 
     if(pool.length === 0){
       toast('Nincs elég kérdés ehhez a beállításhoz.');
@@ -182,7 +304,7 @@
       answered: [], // {id, ok, user, correct}
       qids: pool.map(q=>q.id),
       settings: {tts, hintEnabled},
-      exam: (mode==='exam') ? {durationMs: 8*60*1000, startedAt: now()} : null
+      exam: (mode==='exam') ? {durationMs: Number($('#examDuration')?.value ?? 8)*60*1000, startedAt: now(), scope: ($('#examScope')?.value ?? 'mixed'), examTopic: ($('#examTopicSelect')?.value ?? null)} : null
     };
 
     saveJSON(STORAGE.session, session);
@@ -395,27 +517,47 @@
       return;
     }
 
-    const ok = isCorrect(q, user);
+    const res = evaluateAnswer(q, user); // {score, verdict, reason?}
 
-    // update stats
-    if(ok){
-      session.score += 1;
-      session.streak += 1;
-      session.bestStreak = Math.max(session.bestStreak, session.streak);
-    } else {
-      session.streak = 0;
-    }
+// update score/streak
+session.score += res.score;
+if(res.verdict==='ok'){
+  session.streak += 1;
+  session.bestStreak = Math.max(session.bestStreak, session.streak);
+} else {
+  session.streak = 0;
+}
 
-    session.answered.push({
-      id: q.id,
-      ok,
-      user,
-      correct: q.answer
-    });
+session.answered.push({
+  id: q.id,
+  verdict: res.verdict,
+  score: res.score,
+  reason: res.reason || null,
+  user,
+  correct: q.answer
+});
 
-    saveJSON(STORAGE.session, session);
+// persistent adaptive stats
+const stats = getStats();
+stats.attemptsById[q.id] = (stats.attemptsById[q.id] ?? 0) + 1;
+if(res.verdict==='wrong'){
+  stats.wrongById[q.id] = (stats.wrongById[q.id] ?? 0) + 1;
+  stats.wrongByTopic[q.topic] = (stats.wrongByTopic[q.topic] ?? 0) + 1;
+  if(res.reason) stats.wrongByReason[res.reason] = (stats.wrongByReason[res.reason] ?? 0) + 1;
+}
+if(res.verdict==='partial'){
+  stats.partialById[q.id] = (stats.partialById[q.id] ?? 0) + 1;
+  // partial still indicates weakness in topic, but less
+  stats.wrongByTopic[q.topic] = (stats.wrongByTopic[q.topic] ?? 0) + 0.25;
+  if(res.reason) stats.wrongByReason[res.reason] = (stats.wrongByReason[res.reason] ?? 0) + 0.25;
+  if(res.reason==='ékezet') toast('Fél pont – csak az ékezetek csúsztak el.');
+  if(res.reason==='kettőzés') toast('Fél pont – a kettőzés/hasonulás volt a buktató.');
+}
+saveStats(stats);
 
-    renderFeedback(q, user, ok);
+saveJSON(STORAGE.session, session);
+
+renderFeedback(q, user, res);
 
     btnSubmit.hidden = true;
     btnNext.hidden = false;
@@ -425,33 +567,8 @@
     if(inp) inp.disabled = true;
   }
 
-  function isCorrect(q, user){
-    if(q.type==='input'){
-      const u = normalize(user);
-      const accepted = (q.accepted ?? [q.answer]).map(normalize);
-      if(accepted.includes(u)) return true;
+  function isCorrect(q, user){ return evaluateAnswer(q, user).score === 1; }
 
-      // If user missed only diacritics, give partial hint (still incorrect)
-      const strip = (s) => normalize(s)
-        .normalize('NFD')
-        .replace(/\p{Diacritic}/gu,'');
-      const u2 = strip(user);
-      if(accepted.map(strip).includes(u2)){
-        toast('Majdnem! Figyelj az ékezetekre.');
-      }
-      return false;
-    }
-
-    if(q.type==='mcq'){
-      return normalize(user) === normalize(q.answer);
-    }
-
-    if(q.type==='pick'){
-      return user === q.answer;
-    }
-
-    return false;
-  }
 
   
   function mistakeDetail(q, user){
@@ -483,28 +600,42 @@
     }
   }
 
-function renderFeedback(q, user, ok){
-    feedback.hidden = false;
-    feedback.className = ok ? 'feedback ok' : 'feedback bad';
 
-    const title = ok ? '✅ Helyes!' : '❌ Nem egészen';
-    const userLine = q.type==='pick'
-      ? `<div class="exp"><strong>Válaszod:</strong> ${safeHtml(labelOfPick(q, user) || user)}</div>`
-      : `<div class="exp"><strong>Válaszod:</strong> ${safeHtml(user)}</div>`;
+function renderFeedback(q, user, res){
+  feedback.hidden = false;
+  feedback.className =
+    (res.verdict==='ok') ? 'feedback ok' :
+    (res.verdict==='partial') ? 'feedback partial' :
+    'feedback bad';
 
-    const corrLine = q.type==='pick'
-      ? `<div class="exp"><strong>Helyes:</strong> ${safeHtml(labelOfPick(q, q.answer) || q.answer)}</div>`
-      : `<div class="exp"><strong>Helyes:</strong> ${safeHtml(q.answer)}</div>`;
+  const title =
+    (res.verdict==='ok') ? '✅ Helyes!' :
+    (res.verdict==='partial') ? '🟡 Majdnem (fél pont)' :
+    '❌ Nem egészen';
 
-    const exp = q.explanation ? `<div class="exp">${q.explanation}</div>` : '';
+  const userLine = (q.type==='pick')
+    ? `<div class="exp"><strong>Válaszod:</strong> ${safeHtml(labelOfPick(q, user) || user)}</div>`
+    : `<div class="exp"><strong>Válaszod:</strong> ${safeHtml(user)}</div>`;
 
-    const why = (!ok)
-      ? `<div class="exp"><h4>Mi volt a hiba?</h4><div>${mistakeDetail(q, user)}</div>${q.hint ? `<div style="margin-top:8px;"><strong>Mire figyelj:</strong> ${safeHtml(q.hint)}</div>` : ''}</div>`
-      : '';
+  const corrLine = (q.type==='pick')
+    ? `<div class="exp"><strong>Helyes:</strong> ${safeHtml(labelOfPick(q, q.answer) || q.answer)}</div>`
+    : `<div class="exp"><strong>Helyes:</strong> ${safeHtml(q.answer)}</div>`;
 
-    feedback.innerHTML = `<h3>${title}</h3>${userLine}${corrLine}${why}${exp}`;
-  }
+  const exp = q.explanation ? `<div class="exp">${q.explanation}</div>` : '';
+
+  const partialBlock = (res.verdict==='partial')
+    ? `<div class="exp"><strong>Részpont oka:</strong> ${safeHtml(res.reason || '')}. Figyelj a részletekre (gyakori: ékezetek / kettőzés).</div>`
+    : '';
+
+  const why = (res.verdict!=='ok')
+    ? `<div class="exp"><h4>Mi volt a hiba?</h4>${partialBlock}<div>${mistakeDetail(q, user)}</div>${q.hint ? `<div style="margin-top:8px;"><strong>Mire figyelj:</strong> ${safeHtml(q.hint)}</div>` : ''}</div>`
+    : '';
+
+  feedback.innerHTML = `<h3>${title}</h3>${userLine}${corrLine}${why}${exp}`;
+}
+
 function labelOfPick(q, value){
+(q, value){
     return q.pills?.find(p=>p.value===value)?.label;
   }
 
@@ -526,7 +657,7 @@ function labelOfPick(q, value){
     saveJSON(STORAGE.session, session);
 
     // update persistent stats
-    const stats = loadJSON(STORAGE.stats, {bestPct:0, bestScore:0, last:null});
+    const stats = getStats();
     const pct = Math.round((session.score/session.count)*100);
     if(pct > stats.bestPct) stats.bestPct = pct;
     if(session.score > stats.bestScore) stats.bestScore = session.score;
@@ -540,7 +671,7 @@ function labelOfPick(q, value){
       topic: session.topic,
       durationMs: now() - session.createdAt
     };
-    saveJSON(STORAGE.stats, stats);
+    saveStats(stats);
 
     showView('summary');
     renderSummary();
@@ -548,7 +679,7 @@ function labelOfPick(q, value){
 
   // --- Summary
   function renderSummary(){
-    const stats = loadJSON(STORAGE.stats, {bestPct:0, bestScore:0, last:null});
+    const stats = getStats();
     const last = stats.last;
 
     if(!last){
@@ -568,7 +699,7 @@ function labelOfPick(q, value){
     // Review list from current session (if available)
     const s = loadSession() || loadJSON(STORAGE.session, null);
     const answered = s?.answered || [];
-    const wrong = answered.filter(a=>!a.ok);
+    const wrong = answered.filter(a=>(a.verdict ?? (a.ok?'ok':'wrong'))!=='ok');
 
     const reviewCard = $('#reviewCard');
     const list = $('#reviewList');
@@ -584,7 +715,7 @@ function labelOfPick(q, value){
         div.className = 'review-item';
         div.innerHTML = `
           <div class="q">${q ? q.prompt : safeHtml(item.id)}</div>
-          <div class="a"><strong>Válaszod:</strong> ${safeHtml(item.user)}<br/><strong>Helyes:</strong> ${safeHtml(item.correct)}</div>
+          <div class="a"><strong>Eredmény:</strong> ${safeHtml(item.verdict==='partial' ? 'Fél pont' : 'Hibás')} ( +${item.score ?? 0} )<br/><strong>Válaszod:</strong> ${safeHtml(item.user)}<br/><strong>Helyes:</strong> ${safeHtml(item.correct)}</div>
           ${q?.explanation ? `<div class="a">${q.explanation}</div>`:''}
         `;
         list.appendChild(div);

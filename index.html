@@ -54,6 +54,36 @@
         <div class="grid" id="topicList"></div>
       </div>
 
+
+<div class="card" id="examCard" hidden>
+  <h2>Mini témazáró beállítások</h2>
+  <div class="row">
+    <div>
+      <label class="label" for="examScope">Kérdések köre</label>
+      <select id="examScope" class="select">
+        <option value="mixed" selected>Kevert (vegyes, de nem „törvény felismerés”)</option>
+        <option value="topic">Csak egy témakörből</option>
+      </select>
+    </div>
+    <div>
+      <label class="label" for="examDuration">Időkeret</label>
+      <select id="examDuration" class="select">
+        <option value="6">6 perc</option>
+        <option value="8" selected>8 perc</option>
+        <option value="10">10 perc</option>
+        <option value="12">12 perc</option>
+      </select>
+    </div>
+  </div>
+  <div class="row" id="examTopicRow" hidden>
+    <div style="flex:1;">
+      <label class="label" for="examTopicSelect">Témakör</label>
+      <select id="examTopicSelect" class="select"></select>
+    </div>
+  </div>
+  <p class="muted">Tipp: mini témazáróban a cél a gyors, biztos helyesírás. Adaptív módban több olyan feladat jön, amit korábban rontottál.</p>
+</div>
+
       <div class="card">
         <h2>3) Nehézség és mennyiség</h2>
         <div class="row">
@@ -83,6 +113,10 @@
           <label class="checkbox">
             <input id="showHint" type="checkbox" checked />
             <span>Hint gomb megjelenítése</span>
+          </label>
+          <label class="checkbox">
+            <input id="adaptiveMode" type="checkbox" checked />
+            <span>Rontott típusokra rágyúr (adaptív)</span>
           </label>
         </div>
         <div class="row">

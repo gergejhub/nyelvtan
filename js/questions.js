@@ -289,7 +289,6 @@
   // ----------------------------------------------------------------------------
   // 4) EGYSZERŰSÍTÉS – 3 azonos mássalhangzó találkozása
   // Toldalékolásnál: hosszal (hossz+val), rosszal (rossz+val), passzal (passz+val)
-  // Összetételben gyakran kötőjel: toll-labda, híd-díj, jobb-bal (tanulói szinthez igazítva)
   // ----------------------------------------------------------------------------
 
   const simpl_suffix = [
@@ -299,23 +298,13 @@
     ['ház','házzal'], ['rész','résszel'], ['szél','széllel'], // részben teljes hasonulás
   ];
 
-  const simpl_compounds = [
-    ['toll labda','toll-labda','Összetett szóban a három azonos mássalhangzó miatt gyakran kötőjellel tagolunk.'],
-    ['híd díj','híd-díj','Két szó találkozik, és a d hangból három lenne: híd + díj → híd-díj.'],
-    ['jobb bal','jobb-bal','A két tag között kötőjel segít átlátni a határt.'],
-    ['toll lap','toll-lap','Toll + lap: l találkozás, kötőjellel könnyebb olvasni.'],
-    ['szebb bőr','szebb-bőr','Három b lenne (szebb + bőr), ezért kötőjel segít.'],
-    ['hossz szál','hossz-szál','Három s lenne (hossz + szál), kötőjel választja el.'],
-    ['passz szituáció','passz-szituáció','Három sz lenne (passz + szituáció), kötőjellel tagoljuk.'],
-  ];
-
   const explain_simpl = (correct) => `
     <div><strong>Szabály:</strong> ha <strong>három azonos mássalhangzó</strong> találkozna, a helyesírás <strong>egyszerűsít</strong>.</div>
     <ul>
       <li><strong>Toldalékolásnál</strong> általában <strong>kettőt írunk</strong>: rossz+val → rosszal.</li>
-      <li><strong>Összetett szónál</strong> gyakran <strong>kötőjellel</strong> tagolunk: toll-labda.</li>
+      <li><strong>Összetett szavaknál</strong> a helyes írásmód külön szabály szerint alakul (ezt most nem keverjük ide).</li>
     </ul>
-    <div><strong>Mire figyelj?</strong> Ne írj három azonos betűt egymás után (rosszszal ✗), és összetételeknél gondolj a kötőjelre.</div>
+    <div><strong>Mire figyelj?</strong> Ne írj három azonos betűt egymás után (rosszszal ✗), és kerüld a három azonos betűt egymás után.</div>
   `;
 
   let i4=1;
@@ -352,33 +341,12 @@
     });
   });
 
-  // compound-based pick
-  let i4p=1;
-  simpl_compounds.forEach(([raw, corr, why])=>{
-    const pills = [
-      {label:corr, value:'ok'},
-      {label:corr.replace('-',''), value:'nodash'},
-      {label:raw.replace(' ','') , value:'concat'}
-    ];
-    const mistakeMap = {
-      'nodash': 'Összetett szónál a kötőjel segít elkerülni a „három azonos mássalhangzó” nehezen olvasható alakját.',
-      'concat': 'Ha mindent egybeírnánk, gyakran 3 azonos betű lenne egymás után. Ilyenkor a kötőjel a megoldás.'
-    };
-    pick({
-      id:id('es_pick', i4p++),
-      topic:'egyszerusites',
-      difficulty:'hard',
-      prompt:`Válaszd ki a helyes írásmódot: <strong>${raw}</strong>`,
-      answer:'ok',
-      pills,
-      hint:'Összetett szavaknál a kötőjel segít tagolni, ha túl sok azonos mássalhangzó találkozik.',
-      explanation:`${explain_simpl(corr)}<div><strong>Konkrétan itt:</strong> ${safe(why)}</div>`,
-      mistakeMap
-    });
-  });
+  // (Removed) compound-based pick questions: túl sok a vitatható/ritka írásmód, tanári elvárás szerint csak biztos példák maradnak.
 
   // ----------------------------------------------------------------------------
   // 5) HOSSZÚSÁG / KETTŐZÉS – kell/kel, hall/hal, száll/szal, megy/menn...
+  // ----------------------------------------------------------------------------
+
   // ----------------------------------------------------------------------------
 
   const length_pairs = [
@@ -407,7 +375,7 @@
     <div><strong>Szabály:</strong> a magyarban a <strong>rövid</strong> és <strong>hosszú</strong> mássalhangzók jelentéskülönbséget is okozhatnak.</div>
     <ul>
       <li>Helyes: <strong>${good}</strong></li>
-      <li>Gyakori téves: <strong>${bad}</strong></li>
+      <li>Gyakori hibás írásmód: <strong>${bad}</strong></li>
     </ul>
     <div><strong>Miért fontos?</strong> ${safe(note || 'A kettőzés sokszor a szó jelentését vagy nyelvtani alakját jelzi.')}</div>
     <div><strong>Mire figyelj?</strong> Ha bizonytalan vagy: mondd ki lassan, és gondold végig a jelentést (pl. kell vs kel).</div>
@@ -415,14 +383,15 @@
 
   let i5=1;
   shuffle(clean_length).slice(0, 55).forEach(([good, bad, note])=>{
-    const options = ensureContains(shuffle([good, bad, mutateLenWrong(good), mutateLenWrong(bad)]).slice(0,4), good);
+    const options = shuffle([good, bad]);
     const mistakeMap = {};
     mistakeMap[norm(bad)] = 'Kimaradt a kettőzés / hosszú mássalhangzó jelölése. Sokszor a jelentés is megváltozik!';
     mcq({
       id:id('hl_mcq', i5++),
       topic:'hosszusag',
       difficulty: i5<18 ? 'easy' : (i5<36 ? 'medium':'hard'),
-      prompt:`Válaszd ki a helyes alakot!`,
+      prompt:`Válaszd ki a helyes alakot a zárójelből: (${good} / ${bad})`,
+      note:'Figyelj: a rossz opciók szándékosan hibás írásmódok (gyakori tévesztések), nem „külön szavak”.',
       answer:good,
       options,
       hint:'Figyelj a kettőzésre (pl. kell, több, innen).',
@@ -451,6 +420,7 @@
       topic:'hosszusag',
       difficulty:'medium',
       prompt:p,
+      note:'Ha két alakot látsz a zárójelben, az egyik szándékosan hibás írásmód (gyakori hiba).',
       answer:good,
       accepted:[good],
       hint:'A jelentés segít: kell=szükséges, kel=felkel; hall=hall, hal=állat.',
@@ -479,8 +449,7 @@
     {w:'tudja', law:'osszeolvadas', why:'kiejtés: [tugya], írás: tudja (j megmarad).'},
     {w:'mondja', law:'osszeolvadas', why:'kiejtés: [mongya], írás: mondja.'},
     {w:'rosszal', law:'egyszerusites', why:'rossz + val → három z lenne, egyszerűsítünk.'},
-    {w:'toll-labda', law:'egyszerusites', why:'összetétel, három l lenne → kötőjel segít.'},
-    {w:'kell', law:'hosszusag', why:'kettőzött l jelöli a hosszú mássalhangzót, és jelentést is megkülönböztet.'},
+        {w:'kell', law:'hosszusag', why:'kettőzött l jelöli a hosszú mássalhangzót, és jelentést is megkülönböztet.'},
     {w:'innen', law:'hosszusag', why:'két n: a szó helyes alakja.'},
   ];
 
@@ -612,7 +581,7 @@
         id:id('rhx_in', rhExtra++),
         topic:'reszleges_hasonulas',
         difficulty:'medium',
-        prompt:`Írd be helyesen: „Tegnap ő ____.” <span class="muted">${corr}</span>`,
+        prompt:`Írd be a helyes alakot a zárójelből: (${corr} / ${wrong}) – „Tegnap ő ____.”`,
         answer:corr,
         accepted:[corr],
         hint:'Hallás után könnyű elrontani. Gondold végig a szótövet!',
@@ -716,10 +685,8 @@
   // további összetett kötőjeles példák
   const es_more_comp = [
     ['több büntetés','több-büntetés'],
-    ['szebb bőr','szebb-bőr'],
-    ['kedd délután','kedd-délután'],
-    ['jobb bal','jobb-bal'],
-    ['mell lapon','mell-lapon'],
+['kedd délután','kedd-délután'],
+['mell lapon','mell-lapon'],
     ['orr része','orr-része'],
     ['hossz szakasz','hossz-szakasz'],
     ['passz széria','passz-széria'],
@@ -772,7 +739,7 @@
       difficulty:(lenExtra<18?'easy':(lenExtra<36?'medium':'hard')),
       prompt:'Válaszd ki a helyes alakot!',
       answer:good,
-      options: ensureContains(shuffle([good, bad, mutateLenWrong(good), mutateLenWrong(bad)]).slice(0,4), good),
+      options: shuffle([good, bad]),
       hint:'A kettőzés sokszor jelentést is megkülönböztet.',
       explanation: explain_len(good, bad, note),
       mistakeMap:{[norm(bad)]:'Kimaradt a kettőzés, emiatt a szó hibás vagy más jelentésű.'}

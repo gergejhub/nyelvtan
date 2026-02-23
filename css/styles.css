@@ -280,3 +280,6 @@ select, option{ color: var(--text); }
 option{ background: var(--panel); }
 
 .input::placeholder{ color: rgba(233,240,240,.55); }
+
+
+.note{ margin-top:10px; font-size:0.92rem; line-height:1.35; color:rgba(233,240,246,.92); background:rgba(14,18,16,.55); border:1px solid rgba(173,255,2,.25); padding:10px 12px; border-radius:14px; }

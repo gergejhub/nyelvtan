@@ -406,7 +406,7 @@ let pool = buildPool({mode, topic, difficulty, adaptive});
     }
 
     qMeta.innerHTML = `${safeHtml(q.topic)} • ${safeHtml(q.difficulty)} • ${safeHtml(q.type)}`;
-    qPrompt.innerHTML = q.prompt;
+    qPrompt.innerHTML = q.prompt + (q.note ? `<div class="note">${safeHtml(q.note)}</div>` : ``);
 
     // Hint & TTS
     btnHint.hidden = !(session.settings.hintEnabled && q.hint);

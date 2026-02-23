@@ -88,7 +88,8 @@ function getStats(){
 
 function saveStats(stats){
   stats.updatedAt = now();
-  saveStats(stats);
+  // persist to localStorage (do NOT call itself)
+  saveJSON(STORAGE.stats, stats);
 }
 
 function weightedSampleNoReplace(items, weights, k){

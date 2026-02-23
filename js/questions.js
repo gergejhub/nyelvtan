@@ -644,10 +644,10 @@
   }
 
   // --- EGYSZERŰSÍTÉS bővítés: dupla végű szavak + -val/-vel → hármas lenne → kettőt írunk
-  const es_double_end = [
+    const es_double_end = [
     ['több','többel'], ['szebb','szebbel'], ['jobb','jobbal'], ['kedd','keddel'],
-    ['orr','orral'], ['mell','mellel'], ['száll','szállal'], ['kell','kellel'],
-    ['vissz','visszel'], ['hossz','hosszal'], ['passz','passzal'], ['bossz','bosszal'],
+    ['orr','orral'], ['mell','mellel'], ['toll','tollal'], ['sakk','sakkal'],
+    ['hossz','hosszal'], ['passz','passzal'], ['bossz','bosszal'],
   ];
 
   let esExtra=1;

@@ -635,9 +635,8 @@ function renderFeedback(q, user, res){
 }
 
 function labelOfPick(q, value){
-(q, value){
-    return q.pills?.find(p=>p.value===value)?.label;
-  }
+  return q.pills?.find(p=>p.value===value)?.label;
+}
 
   function nextQuestion(){
     session.index += 1;

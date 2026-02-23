@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="Nyelvtan gyakorló: mássalhangzó-törvények (5. osztály) – mobilbarát, offline is működik." />
+  <title>Nyelvtan gyakorló – Mássalhangzó‑törvények</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">M</div>
+      <div>
+        <div class="title">Nyelvtan gyakorló</div>
+        <div class="subtitle">Mássalhangzó‑törvények • 5. osztály</div>
+      </div>
+    </div>
+    <button id="btnQuickStart" class="btn btn-primary" title="Gyors start">Start</button>
+  </header>
+
+  <main class="container">
+
+    <section id="view-home" class="view active" aria-labelledby="homeTitle">
+      <h1 id="homeTitle">Gyakorlás egy témazáróhoz</h1>
+      <p class="lead">
+        Válassz módot, és a rendszer véletlenszerűen ad feladatokat <strong>ismétlődés nélkül</strong> (amíg van új kérdés).
+        Minden feladathoz kapsz rövid, érthető magyarázatot.
+      </p>
+
+      <div class="card">
+        <h2>1) Mód</h2>
+        <div class="grid">
+          <label class="radio">
+            <input type="radio" name="mode" value="mix" checked />
+            <span>Kevert (mindenből)</span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="mode" value="topic" />
+            <span>Témakör szerint</span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="mode" value="exam" />
+            <span>Mini témazáró (időre)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card" id="topicCard">
+        <h2>2) Témakör (ha nem Kevert)</h2>
+        <div class="grid" id="topicList"></div>
+      </div>
+
+      <div class="card">
+        <h2>3) Nehézség és mennyiség</h2>
+        <div class="row">
+          <div>
+            <label class="label" for="difficulty">Nehézség</label>
+            <select id="difficulty" class="select">
+              <option value="easy">Könnyű</option>
+              <option value="medium" selected>Közepes</option>
+              <option value="hard">Nehéz</option>
+            </select>
+          </div>
+          <div>
+            <label class="label" for="count">Feladatok száma</label>
+            <select id="count" class="select">
+              <option>10</option>
+              <option selected>15</option>
+              <option>20</option>
+              <option>30</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <label class="checkbox">
+            <input id="ttsEnabled" type="checkbox" />
+            <span>Felolvasás (opcionális)</span>
+          </label>
+          <label class="checkbox">
+            <input id="showHint" type="checkbox" checked />
+            <span>Hint gomb megjelenítése</span>
+          </label>
+        </div>
+        <div class="row">
+          <button id="btnStart" class="btn btn-primary">Gyakorlás indítása</button>
+          <button id="btnResume" class="btn" hidden>Folytatás</button>
+        </div>
+        <p class="muted">Tipp: a Kevert mód inkább a logikát gyakoroltatja; a Mini témazáró 8 percet ad 15 kérdésre.</p>
+      </div>
+
+      <div class="card">
+        <h2>Wordwall gyakorlók</h2>
+        <p class="muted">A tanár által küldött linkek (külön fülön nyílnak):</p>
+        <ul class="links">
+          <li><a target="_blank" rel="noreferrer" href="https://wordwall.net/hu/resource/2049987/nyelvtan/m%C3%A1ssalhangz%C3%B3-t%C3%B6rv%C3%A9nyek">Mássalhangzó‑törvények</a></li>
+          <li><a target="_blank" rel="noreferrer" href="https://wordwall.net/hu/resource/95328474/nyelvtan/mini-m%C3%A1ssalhangz%C3%B3-t%C3%B6rv%C3%A9nyek-ism%C3%A9t">Mini – mássalhangzó‑törvények ismét</a></li>
+          <li><a target="_blank" rel="noreferrer" href="https://wordwall.net/hu/resource/8256979/nyelvtan/m%C3%A1ssalhangz%C3%B3-t%C3%B6rv%C3%A9nyek">Mássalhangzó‑törvények (2)</a></li>
+          <li><a target="_blank" rel="noreferrer" href="https://wordwall.net/hu/resource/831930/m%C3%A1ssalhangz%C3%B3-t%C3%B6rv%C3%A9nyek">Mássalhangzó‑törvények (3)</a></li>
+          <li><a target="_blank" rel="noreferrer" href="https://wordwall.net/hu/resource/875292/m%C3%A1ssalhangz%C3%B3-t%C3%B6rv%C3%A9nyek">Mássalhangzó‑törvények (4)</a></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Adatok és privát</h2>
+        <p class="muted">Minden eredmény csak a készülékeden, <strong>localStorage</strong>-ban tárolódik. Nincs fiók, nincs feltöltés.</p>
+      </div>
+    </section>
+
+    <section id="view-practice" class="view" aria-labelledby="practiceTitle">
+      <div class="practice-top">
+        <div>
+          <div class="kpi">
+            <span id="kpiIndex">1/15</span>
+            <span class="dot">•</span>
+            <span id="kpiScore">Pont: 0</span>
+            <span class="dot">•</span>
+            <span id="kpiTopic">Kevert</span>
+          </div>
+          <div class="progress" aria-hidden="true"><div id="progressBar"></div></div>
+        </div>
+        <div class="actions">
+          <button id="btnRules" class="btn btn-small">Szabályok</button>
+          <button id="btnQuit" class="btn btn-small btn-danger">Kilépés</button>
+        </div>
+      </div>
+
+      <article class="qcard" aria-live="polite">
+        <h2 id="practiceTitle" class="qtitle">Feladat</h2>
+        <div class="qmeta" id="qMeta"></div>
+        <div id="qPrompt" class="qprompt"></div>
+
+        <div id="qBody" class="qbody"></div>
+
+        <div class="qbuttons">
+          <button id="btnHint" class="btn" hidden>Hint</button>
+          <button id="btnSpeak" class="btn" hidden>🔊</button>
+          <button id="btnSubmit" class="btn btn-primary">Ellenőrzés</button>
+          <button id="btnNext" class="btn" hidden>Következő</button>
+        </div>
+
+        <div id="feedback" class="feedback" hidden></div>
+      </article>
+    </section>
+
+    <section id="view-rules" class="view" aria-labelledby="rulesTitle">
+      <h1 id="rulesTitle">Szabályok röviden (puskabarát)</h1>
+      <div class="card">
+        <h2>Mássalhangzó‑törvények – a 6 klasszikus</h2>
+        <ol class="rules">
+          <li><strong>Teljes hasonulás</strong>: az első hang <em>teljesen</em> a másodikhoz igazodik (pl. <em>kézzel</em>, <em>lábbal</em>, <em>híddal</em>).</li>
+          <li><strong>Részleges hasonulás</strong>: csak egy tulajdonság igazodik (gyakran zöngésség: <em>kézből</em>, <em>nyugszik</em>).</li>
+          <li><strong>Összeolvadás</strong>: két hangból egy új lesz (pl. <em>látja</em> [t+j → ty], <em>fussanak</em> [s+j → sj/ss?] – a helyesírási alakot kell tudni).</li>
+          <li><strong>Rövidülés</strong>: hosszú mássalhangzó rövidül toldalék előtt (pl. <em>hallgat</em> → <em>hallgatsz</em> – nem „hallgatt-sz”).</li>
+          <li><strong>Egyszerűsítés</strong>: három azonos/rokon hangból kettő marad írásban (pl. <em>tollal</em> + -val? → <em>tollal</em>, <em>rossz-szal</em> → <em>rosszal</em>).</li>
+          <li><strong>Kiesés</strong>: egy hang eltűnik kiejtésben vagy írásban bizonyos helyzetekben (pl. beszédben gyakori; a feladatokban a helyes alak a lényeg).</li>
+        </ol>
+        <p class="muted">Megjegyzés: iskolánként kicsit máshogy csoportosítják (pl. „zöngésség szerinti hasonulás” külön). Itt a feladatok a tipikus 5.-es tananyaghoz vannak igazítva.</p>
+      </div>
+
+      <div class="card">
+        <h2>Gyors döntési fa (melyik törvény?)</h2>
+        <ul>
+          <li><strong>Van toldalék -val/-vel?</strong> → gyanús a <em>teljes hasonulás</em> (kézzel, bottal, híddal).</li>
+          <li><strong>„zöngés–zöngétlen” párok találkoznak?</strong> → <em>részleges hasonulás</em> (kézből, házhoz).</li>
+          <li><strong>t/d/s/z + j</strong> találkozik? → gyakran <em>összeolvadás</em> (látja, mondja, fussák? stb.).</li>
+          <li><strong>Három mássalhangzó torlódik</strong>? → lehet <em>egyszerűsítés</em>.</li>
+        </ul>
+      </div>
+
+      <div class="row">
+        <button id="btnBackFromRules" class="btn">Vissza</button>
+        <button id="btnResetProgress" class="btn btn-danger">Eredmények törlése</button>
+      </div>
+    </section>
+
+    <section id="view-summary" class="view" aria-labelledby="summaryTitle">
+      <h1 id="summaryTitle">Eredmény</h1>
+      <div class="card">
+        <div class="summary-grid">
+          <div>
+            <div class="big" id="sumScore">0/0</div>
+            <div class="muted" id="sumPct">0%</div>
+          </div>
+          <div>
+            <div class="muted">Legjobb sorozat</div>
+            <div class="big" id="sumStreak">0</div>
+          </div>
+          <div>
+            <div class="muted">Idő</div>
+            <div class="big" id="sumTime">–</div>
+          </div>
+        </div>
+        <div class="row">
+          <button id="btnReview" class="btn">Hibák átnézése</button>
+          <button id="btnPlayAgain" class="btn btn-primary">Új kör</button>
+        </div>
+      </div>
+
+      <div class="card" id="reviewCard" hidden>
+        <h2>Hibák</h2>
+        <div id="reviewList" class="review"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <nav class="nav">
+      <button class="navbtn active" data-nav="home">Kezdőlap</button>
+      <button class="navbtn" data-nav="rules">Szabályok</button>
+      <button class="navbtn" data-nav="summary">Eredmény</button>
+    </nav>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="js/questions.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

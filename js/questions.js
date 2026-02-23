@@ -437,11 +437,11 @@
     ['kel','Írd be a helyes szót: „Reggel korán ____ az ember.”'],
     ['hall','Írd be a helyes szót: „Csendben ____ a madárhangot.”'],
     ['hal','Írd be a helyes szót: „A tóban úszik egy ____.”'],
-    ['innen','Írd be a helyes szót: „Gyere ____ gyorsan!”'],
-    ['onnan','Írd be a helyes szót: „Tedd el ____ a könyvet!”'],
+    ['innen','Írd be a helyes alakot a zárójelből: (innen / ide) – „Gyere ____ gyorsan!”'],
+    ['onnan','Írd be a helyes alakot a zárójelből: (onnan / onan) – „Tedd el ____ a könyvet!”'],
     ['több','Írd be a helyes szót: „Kérek ____ időt.”'],
     ['mellé','Írd be a helyes szót: „Ülj ide ____!”'],
-    ['annyi','Írd be a helyes szót: „Nem ettem ____.”'],
+    ['annyi','Írd be a helyes alakot a zárójelből: (annyi / anyi) – „Nem ettem ____.”'],
     ['vitte','Írd be a helyes szót: „Ő ____ haza a táskát.”'],
   ];
   let i5i=1;
